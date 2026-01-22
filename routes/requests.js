@@ -62,11 +62,11 @@ router.post('/:code/requests', async (req, res) => {
     }
 
     const result = await db.run(
-      'INSERT INTO requests (event_id, title, artist, spotify_id) VALUES (?, ?, ?, ?)',
+      'INSERT INTO requests (event_id, title, artist, spotify_id, votes) VALUES (?, ?, ?, ?, 1)',
       [event.id, title, artist, spotify_id || null]
     );
 
-    res.status(201).json({ id: result.id, title, artist, votes: 0 });
+    res.status(201).json({ id: result.id, title, artist, votes: 1 });
   } catch (error) {
     console.error('Fehler beim Erstellen des Liedwunsches:', error);
     res.status(500).json({ error: 'Fehler beim Erstellen des Liedwunsches' });

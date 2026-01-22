@@ -20,6 +20,7 @@ app.use(express.static(path.join(__dirname, 'client/build')));
 // API Routes
 app.use('/api/dj', authRoutes);
 app.use('/api/dj/events', eventRoutes);
+app.use('/api/dj/settings', require('./routes/settings'));
 app.use('/api/events', requestRoutes);
 app.use('/api/spotify', spotifyRoutes);
 

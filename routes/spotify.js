@@ -1,18 +1,19 @@
 const express = require('express');
 const axios = require('axios');
+const { authenticate } = require('../middleware/auth');
+const db = require('../database');
 const router = express.Router();
 
-let accessToken = null;
-let tokenExpiry = null;
+// Token-Cache pro DJ
+const tokenCache = {};
 
-// Spotify Access Token abrufen
-const getAccessToken = async () => {
-  if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
-    return accessToken;
+// Spotify Access Token abrufen (DJ-spezifisch)
+const getAccessToken = async (djId, clientId, clientSecret) => {
+  const cacheKey = `${djId}_${clientId}`;
+  
+  if (tokenCache[cacheKey] && tokenCache[cacheKey].expiry && Date.now() < tokenCache[cacheKey].expiry) {
+    return tokenCache[cacheKey].token;
   }
-
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
     throw new Error('Spotify Credentials nicht konfiguriert');
@@ -30,31 +31,45 @@ const getAccessToken = async () => {
       }
     );
 
-    accessToken = response.data.access_token;
-    tokenExpiry = Date.now() + (response.data.expires_in * 1000) - 60000; // 1 Minute Puffer
+    const token = response.data.access_token;
+    const expiry = Date.now() + (response.data.expires_in * 1000) - 60000; // 1 Minute Puffer
+    
+    tokenCache[cacheKey] = { token, expiry };
 
-    return accessToken;
+    return token;
   } catch (error) {
     console.error('Fehler beim Abrufen des Spotify Tokens:', error);
     throw error;
   }
 };
 
-// Musik suchen
-router.get('/search', async (req, res) => {
+// Musik suchen (öffentlich - verwendet Event-Code um DJ zu finden)
+router.get('/search/:eventCode', async (req, res) => {
   try {
+    const { eventCode } = req.params;
     const { q, limit = 20 } = req.query;
 
     if (!q || q.trim().length === 0) {
       return res.json([]);
     }
 
-    // Prüfen ob Spotify konfiguriert ist
-    if (!process.env.SPOTIFY_CLIENT_ID || !process.env.SPOTIFY_CLIENT_SECRET) {
-      return res.json([]); // Leere Ergebnisse wenn Spotify nicht konfiguriert
+    // Event finden um DJ zu ermitteln
+    const event = await db.get('SELECT dj_id FROM events WHERE code = ?', [eventCode]);
+    if (!event) {
+      return res.json([]); // Event nicht gefunden
     }
 
-    const token = await getAccessToken();
+    // DJ Spotify Credentials abrufen
+    const dj = await db.get(
+      'SELECT spotify_client_id, spotify_client_secret FROM djs WHERE id = ?',
+      [event.dj_id]
+    );
+
+    if (!dj || !dj.spotify_client_id || !dj.spotify_client_secret) {
+      return res.json([]); // Keine Spotify Credentials konfiguriert
+    }
+
+    const token = await getAccessToken(event.dj_id, dj.spotify_client_id, dj.spotify_client_secret);
 
     const response = await axios.get('https://api.spotify.com/v1/search', {
       headers: {
@@ -81,9 +96,15 @@ router.get('/search', async (req, res) => {
   } catch (error) {
     console.error('Spotify-Suchfehler:', error);
     if (error.response?.status === 401) {
-      // Token abgelaufen, neu holen
-      accessToken = null;
-      tokenExpiry = null;
+      // Token abgelaufen, Cache löschen
+      const event = await db.get('SELECT dj_id FROM events WHERE code = ?', [req.params.eventCode]);
+      if (event) {
+        Object.keys(tokenCache).forEach(key => {
+          if (key.startsWith(`${event.dj_id}_`)) {
+            delete tokenCache[key];
+          }
+        });
+      }
       return res.status(500).json({ error: 'Spotify-Authentifizierung fehlgeschlagen' });
     }
     res.status(500).json({ error: 'Fehler bei der Spotify-Suche' });

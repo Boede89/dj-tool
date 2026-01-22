@@ -13,6 +13,10 @@ function DJDashboard() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [requests, setRequests] = useState([]);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [spotifyClientId, setSpotifyClientId] = useState('');
+  const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
+  const [hasSpotifyCredentials, setHasSpotifyCredentials] = useState(false);
   const navigate = useNavigate();
   const refreshIntervalRef = useRef(null);
 
@@ -23,7 +27,48 @@ function DJDashboard() {
       return;
     }
     loadEvents();
+    loadSettings();
   }, [navigate]);
+
+  const loadSettings = async () => {
+    try {
+      const response = await api.get('/api/dj/settings');
+      setHasSpotifyCredentials(response.data.hasSpotifyCredentials);
+    } catch (err) {
+      console.error('Fehler beim Laden der Einstellungen:', err);
+    }
+  };
+
+  const saveSpotifyCredentials = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put('/api/dj/settings/spotify', {
+        client_id: spotifyClientId,
+        client_secret: spotifyClientSecret
+      });
+      setHasSpotifyCredentials(true);
+      setShowSettings(false);
+      setSuccess('Spotify Credentials erfolgreich gespeichert!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Speichern der Spotify Credentials');
+    }
+  };
+
+  const deleteSpotifyCredentials = async () => {
+    if (!window.confirm('Möchten Sie die Spotify Credentials wirklich löschen?')) return;
+    
+    try {
+      await api.delete('/api/dj/settings/spotify');
+      setHasSpotifyCredentials(false);
+      setSpotifyClientId('');
+      setSpotifyClientSecret('');
+      setSuccess('Spotify Credentials gelöscht');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Löschen der Spotify Credentials');
+    }
+  };
 
   // Automatische Aktualisierung der Liedwünsche
   useEffect(() => {
@@ -134,13 +179,24 @@ function DJDashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ color: 'white' }}>DJ Dashboard</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
-          {!showCreateForm && (
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowCreateForm(true)}
-            >
-              + Neue Veranstaltung
-            </button>
+          {!showCreateForm && !showSettings && (
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowCreateForm(true)}
+              >
+                + Neue Veranstaltung
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowSettings(true);
+                  loadSettings();
+                }}
+              >
+                ⚙️ Einstellungen
+              </button>
+            </>
           )}
           <button
             className="btn btn-secondary"
@@ -182,6 +238,81 @@ function DJDashboard() {
             />
             <button type="submit" className="btn btn-primary">Erstellen</button>
           </form>
+        </div>
+      )}
+
+      {showSettings && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Einstellungen</h2>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowSettings(false);
+                setSpotifyClientId('');
+                setSpotifyClientSecret('');
+              }}
+            >
+              Schließen
+            </button>
+          </div>
+
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ marginBottom: '16px' }}>Spotify API Credentials</h3>
+            <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
+              Um die Spotify-Suche zu nutzen, benötigst du einen Spotify Developer Account.
+              Erstelle eine App unter{' '}
+              <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+                developer.spotify.com
+              </a>
+              {' '}und trage hier deine Client ID und Client Secret ein.
+            </p>
+
+            {hasSpotifyCredentials && (
+              <div style={{ padding: '12px', background: '#d4edda', borderRadius: '8px', marginBottom: '16px', color: '#155724' }}>
+                ✓ Spotify Credentials sind konfiguriert
+              </div>
+            )}
+
+            <form onSubmit={saveSpotifyCredentials}>
+              <div className="form-group">
+                <label>Spotify Client ID</label>
+                <input
+                  type="text"
+                  value={spotifyClientId}
+                  onChange={(e) => setSpotifyClientId(e.target.value)}
+                  placeholder="Deine Spotify Client ID"
+                  required={!hasSpotifyCredentials}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Spotify Client Secret</label>
+                <input
+                  type="password"
+                  value={spotifyClientSecret}
+                  onChange={(e) => setSpotifyClientSecret(e.target.value)}
+                  placeholder="Dein Spotify Client Secret"
+                  required={!hasSpotifyCredentials}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="btn btn-primary">
+                  {hasSpotifyCredentials ? 'Aktualisieren' : 'Speichern'}
+                </button>
+                {hasSpotifyCredentials && (
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={deleteSpotifyCredentials}
+                  >
+                    Löschen
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

@@ -48,7 +48,7 @@ function GuestView() {
     }
 
     try {
-      const response = await api.get(`/api/spotify/search`, {
+      const response = await api.get(`/api/spotify/search/${code}`, {
         params: { q: query, limit: 10 }
       });
       setSearchResults(response.data);

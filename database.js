@@ -28,9 +28,27 @@ const createTables = () => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT UNIQUE NOT NULL,
           password TEXT NOT NULL,
+          spotify_client_id TEXT,
+          spotify_client_secret TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, (err) => {
+        if (err) {
+          console.error('Fehler beim Erstellen der djs Tabelle:', err);
+        } else {
+          // Spalten hinzufügen falls Tabelle bereits existiert (SQLite unterstützt kein IF NOT EXISTS für ALTER TABLE)
+          db.run(`ALTER TABLE djs ADD COLUMN spotify_client_id TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              console.error('Fehler beim Hinzufügen der spotify_client_id Spalte:', err);
+            }
+          });
+          db.run(`ALTER TABLE djs ADD COLUMN spotify_client_secret TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              console.error('Fehler beim Hinzufügen der spotify_client_secret Spalte:', err);
+            }
+          });
+        }
+      });
 
       // Veranstaltungen Tabelle
       db.run(`
@@ -52,7 +70,7 @@ const createTables = () => {
           title TEXT NOT NULL,
           artist TEXT NOT NULL,
           spotify_id TEXT,
-          votes INTEGER DEFAULT 0,
+          votes INTEGER DEFAULT 1,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (event_id) REFERENCES events(id)
         )
