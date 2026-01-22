@@ -383,7 +383,6 @@ function DJDashboard() {
             <div class="event-header">
               <div class="master-badge">MASTER QR-CODE</div>
               <div class="dj-name">DJ ${djUsername.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-              <h1>${eventName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
               <div class="decorative-line"></div>
               <p class="subtitle">Führt zur aktiven Veranstaltung</p>
             </div>
