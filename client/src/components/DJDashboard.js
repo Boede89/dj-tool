@@ -73,8 +73,23 @@ function DJDashboard() {
       const response = await api.get('/api/dj/master-qr');
       setMasterQRCode(response.data);
     } catch (err) {
-      // Keine aktive Veranstaltung - das ist okay
-      setMasterQRCode(null);
+      console.error('Fehler beim Laden des Master-QR-Codes:', err);
+      // Fallback: QR-Code trotzdem generieren
+      try {
+        const token = localStorage.getItem('dj_token');
+        if (token) {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.decode(token);
+          if (decoded && decoded.username) {
+            const QRCode = require('qrcode');
+            const masterUrl = `${window.location.protocol}//${window.location.host}/dj/${decoded.username}/active`;
+            const qrCodeDataUrl = await QRCode.toDataURL(masterUrl);
+            setMasterQRCode({ qrCode: qrCodeDataUrl, url: masterUrl, event: null });
+          }
+        }
+      } catch (fallbackErr) {
+        console.error('Fehler beim Fallback QR-Code:', fallbackErr);
+      }
     }
   };
 
@@ -841,11 +856,20 @@ function DJDashboard() {
 
             {masterQRCode ? (
               <div style={{ textAlign: 'center', padding: '30px', background: '#f8f9fa', borderRadius: '12px', marginBottom: '20px' }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <strong style={{ color: '#667eea', fontSize: '16px' }}>
-                    Aktive Veranstaltung: {masterQRCode.event.name}
-                  </strong>
-                </div>
+                {masterQRCode.event && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <strong style={{ color: '#667eea', fontSize: '16px' }}>
+                      Aktive Veranstaltung: {masterQRCode.event.name}
+                    </strong>
+                  </div>
+                )}
+                {!masterQRCode.event && (
+                  <div style={{ marginBottom: '16px', padding: '12px', background: '#fff3cd', borderRadius: '8px', color: '#856404' }}>
+                    <p style={{ margin: 0, fontSize: '14px' }}>
+                      ⚠️ Keine aktive Veranstaltung. Aktiviere eine Veranstaltung in der Veranstaltungsliste.
+                    </p>
+                  </div>
+                )}
                 <img src={masterQRCode.qrCode} alt="Master QR-Code" style={{ maxWidth: '250px', width: '100%', height: 'auto' }} />
                 <p style={{ marginTop: '16px', fontSize: '14px', color: '#666' }}>
                   URL: <a href={masterQRCode.url} target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
@@ -861,9 +885,9 @@ function DJDashboard() {
                 </button>
               </div>
             ) : (
-              <div style={{ padding: '20px', background: '#fff3cd', borderRadius: '8px', color: '#856404', textAlign: 'center' }}>
-                <p style={{ margin: 0 }}>
-                  ⚠️ Keine aktive Veranstaltung. Aktiviere eine Veranstaltung, um den Master QR-Code zu erhalten.
+              <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+                <p style={{ margin: 0, color: '#666' }}>
+                  Lade QR-Code...
                 </p>
               </div>
             )}
@@ -1051,25 +1075,58 @@ function DJDashboard() {
               {events.map(event => (
                 <div
                   key={event.id}
-                  className={`event-list-item ${selectedEvent?.id === event.id ? 'active' : ''}`}
-                  onClick={() => selectEvent(event)}
                   style={{
                     padding: '16px',
                     marginBottom: '8px',
                     borderRadius: '8px',
-                    cursor: 'pointer',
                     border: selectedEvent?.id === event.id ? '2px solid #667eea' : '1px solid #e0e0e0',
                     background: selectedEvent?.id === event.id ? '#f0f4ff' : 'white',
                     transition: 'all 0.2s'
                   }}
                 >
-                  <h3 style={{ marginBottom: '8px', fontSize: '18px' }}>{event.name}</h3>
-                  <p style={{ color: '#666', fontSize: '12px', marginBottom: '4px' }}>
-                    Code: <strong>{event.code}</strong>
-                  </p>
-                  <p style={{ color: '#667eea', fontSize: '14px', fontWeight: '600' }}>
-                    {event.request_count || 0} Liedwünsche
-                  </p>
+                  <div
+                    onClick={() => selectEvent(event)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h3 style={{ fontSize: '18px', margin: 0 }}>{event.name}</h3>
+                      {event.is_active === 1 && (
+                        <span style={{
+                          background: '#27ae60',
+                          color: 'white',
+                          padding: '4px 12px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase'
+                        }}>
+                          Aktiv
+                        </span>
+                      )}
+                    </div>
+                    <p style={{ color: '#666', fontSize: '12px', marginBottom: '4px' }}>
+                      Code: <strong>{event.code}</strong>
+                    </p>
+                    <p style={{ color: '#667eea', fontSize: '14px', fontWeight: '600' }}>
+                      {event.request_count || 0} Liedwünsche
+                    </p>
+                  </div>
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e0e0e0' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontSize: '14px' }}>
+                      <input
+                        type="checkbox"
+                        checked={event.is_active === 1}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleEventActive(event.id, e.target.checked);
+                        }}
+                        style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span style={{ color: '#666' }}>
+                        {event.is_active === 1 ? 'Aktiv' : 'Als aktiv setzen'}
+                      </span>
+                    </label>
+                  </div>
                 </div>
               ))}
             </div>

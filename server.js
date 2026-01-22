@@ -52,20 +52,16 @@ app.get('/api/dj/master-qr', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const djId = decoded.djId;
 
-    // Aktive Veranstaltung finden
+    // Aktive Veranstaltung finden (kann null sein)
     const activeEvent = await db.get(
       'SELECT * FROM events WHERE dj_id = ? AND is_active = 1',
       [djId]
     );
 
-    if (!activeEvent) {
-      return res.status(404).json({ error: 'Keine aktive Veranstaltung gefunden' });
-    }
-
     const QRCode = require('qrcode');
     const masterUrl = `${req.protocol}://${req.get('host')}/dj/${decoded.username}/active`;
     const qrCodeDataUrl = await QRCode.toDataURL(masterUrl);
-    res.json({ qrCode: qrCodeDataUrl, url: masterUrl, event: activeEvent });
+    res.json({ qrCode: qrCodeDataUrl, url: masterUrl, event: activeEvent || null });
   } catch (error) {
     console.error('Fehler beim Generieren des Master-QR-Codes:', error);
     res.status(500).json({ error: 'Fehler beim Generieren des Master-QR-Codes' });
