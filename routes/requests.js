@@ -124,24 +124,27 @@ router.post('/:code/requests/:requestId/vote', async (req, res) => {
       }
       
       // Vote-Typ ändern
-      // Von "up" zu "down": votes -2 (von +1 zu -1 = -2)
-      // Von "down" zu "up": votes +2 (von -1 zu +1 = +2)
       await db.run(
         'UPDATE votes SET vote_type = ? WHERE request_id = ? AND ip_address = ?',
         [voteType, requestId, ipAddress]
       );
       
+      // Vote-Änderung berechnen
+      // Von "up" zu "down": votes -2 (von +1 zu -1 = -2)
+      // Von "down" zu "up": votes +2 (von -1 zu +1 = +2)
       const voteChange = existingVote.vote_type === 'up' ? -2 : 2;
-      await db.run('UPDATE requests SET votes = votes + ? WHERE id = ?', [voteChange, requestId]);
+      
+      // Votes aktualisieren und sicherstellen, dass votes nicht unter 1 geht
+      await db.run('UPDATE requests SET votes = MAX(1, votes + ?) WHERE id = ?', [voteChange, requestId]);
     } else {
       // Neuer Vote
       await db.run(
         'INSERT INTO votes (request_id, ip_address, vote_type) VALUES (?, ?, ?)',
         [requestId, ipAddress, voteType]
       );
-      // Votes aktualisieren
+      // Votes aktualisieren und sicherstellen, dass votes nicht unter 1 geht
       const voteChange = voteType === 'up' ? 1 : -1;
-      await db.run('UPDATE requests SET votes = votes + ? WHERE id = ?', [voteChange, requestId]);
+      await db.run('UPDATE requests SET votes = MAX(1, votes + ?) WHERE id = ?', [voteChange, requestId]);
     }
 
     const updatedRequest = await db.get('SELECT * FROM requests WHERE id = ?', [requestId]);
