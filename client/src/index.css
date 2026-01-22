@@ -245,3 +245,42 @@ input:focus, textarea:focus {
   font-size: 14px;
   color: #666;
 }
+
+.event-list-item:hover {
+  background: #f8f9fa !important;
+  transform: translateX(4px);
+}
+
+.event-list-item.active {
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+}
+
+.requests-list {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.request-item-dj {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../utils/api';
@@ -6,12 +6,15 @@ import api from '../utils/api';
 function DJDashboard() {
   const [events, setEvents] = useState([]);
   const [newEventName, setNewEventName] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [requests, setRequests] = useState([]);
+  const [showQRCode, setShowQRCode] = useState(false);
   const navigate = useNavigate();
+  const refreshIntervalRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem('dj_token');
@@ -21,6 +24,25 @@ function DJDashboard() {
     }
     loadEvents();
   }, [navigate]);
+
+  // Automatische Aktualisierung der Liedwünsche
+  useEffect(() => {
+    if (selectedEvent) {
+      // Sofort laden
+      loadRequests(selectedEvent);
+      
+      // Dann alle 3 Sekunden aktualisieren
+      refreshIntervalRef.current = setInterval(() => {
+        loadRequests(selectedEvent);
+      }, 3000);
+
+      return () => {
+        if (refreshIntervalRef.current) {
+          clearInterval(refreshIntervalRef.current);
+        }
+      };
+    }
+  }, [selectedEvent]);
 
   const loadEvents = async () => {
     try {
@@ -38,20 +60,6 @@ function DJDashboard() {
     }
   };
 
-  const createEvent = async (e) => {
-    e.preventDefault();
-    if (!newEventName.trim()) return;
-
-    try {
-      const response = await api.post('/api/dj/events', { name: newEventName });
-      setEvents([response.data, ...events]);
-      setNewEventName('');
-      setSuccess('Veranstaltung erfolgreich erstellt!');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('Fehler beim Erstellen der Veranstaltung');
-    }
-  };
 
   const deleteEvent = async (eventId) => {
     if (!window.confirm('Möchten Sie diese Veranstaltung wirklich löschen?')) return;
@@ -71,13 +79,19 @@ function DJDashboard() {
   };
 
   const loadRequests = async (event) => {
-    setSelectedEvent(event);
+    if (!event) return;
     try {
       const response = await api.get(`/api/events/${event.code}/requests`);
       setRequests(response.data);
     } catch (err) {
-      setError('Fehler beim Laden der Liedwünsche');
+      console.error('Fehler beim Laden der Liedwünsche:', err);
     }
+  };
+
+  const selectEvent = (event) => {
+    setSelectedEvent(event);
+    setShowQRCode(false);
+    loadRequests(event);
   };
 
   const deleteRequest = async (requestId) => {
@@ -85,20 +99,30 @@ function DJDashboard() {
       await api.delete(`/api/dj/events/${selectedEvent.id}/requests/${requestId}`);
       setRequests(requests.filter(r => r.id !== requestId));
       setSuccess('Liedwunsch entfernt');
-      setTimeout(() => setSuccess(''), 3000);
+      setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
       setError('Fehler beim Löschen des Liedwunsches');
     }
   };
 
-  const refreshRequests = async () => {
-    if (selectedEvent) {
-      await loadRequests(selectedEvent);
-    }
-  };
-
   const getQRCodeUrl = (eventCode) => {
     return `${window.location.origin}/event/${eventCode}`;
+  };
+
+  const handleCreateEvent = async (e) => {
+    e.preventDefault();
+    if (!newEventName.trim()) return;
+
+    try {
+      const response = await api.post('/api/dj/events', { name: newEventName });
+      setEvents([response.data, ...events]);
+      setNewEventName('');
+      setShowCreateForm(false);
+      setSuccess('Veranstaltung erfolgreich erstellt!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Erstellen der Veranstaltung');
+    }
   };
 
   if (loading) {
@@ -109,114 +133,218 @@ function DJDashboard() {
     <div className="container">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ color: 'white' }}>DJ Dashboard</h1>
-        <button
-          className="btn btn-secondary"
-          onClick={() => {
-            localStorage.removeItem('dj_token');
-            navigate('/dj/login');
-          }}
-        >
-          Abmelden
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {!showCreateForm && (
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowCreateForm(true)}
+            >
+              + Neue Veranstaltung
+            </button>
+          )}
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              localStorage.removeItem('dj_token');
+              navigate('/dj/login');
+            }}
+          >
+            Abmelden
+          </button>
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
       {success && <div className="success">{success}</div>}
 
-      <div className="card">
-        <h2>Neue Veranstaltung erstellen</h2>
-        <form onSubmit={createEvent}>
-          <input
-            type="text"
-            value={newEventName}
-            onChange={(e) => setNewEventName(e.target.value)}
-            placeholder="Veranstaltungsname"
-            required
-          />
-          <button type="submit" className="btn btn-primary">Erstellen</button>
-        </form>
-      </div>
+      {showCreateForm && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Neue Veranstaltung erstellen</h2>
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowCreateForm(false);
+                setNewEventName('');
+              }}
+            >
+              Abbrechen
+            </button>
+          </div>
+          <form onSubmit={handleCreateEvent}>
+            <input
+              type="text"
+              value={newEventName}
+              onChange={(e) => setNewEventName(e.target.value)}
+              placeholder="Veranstaltungsname"
+              required
+              autoFocus
+            />
+            <button type="submit" className="btn btn-primary">Erstellen</button>
+          </form>
+        </div>
+      )}
 
-      <div className="card">
-        <h2>Meine Veranstaltungen</h2>
-        {events.length === 0 ? (
-          <p>Noch keine Veranstaltungen erstellt.</p>
-        ) : (
-          <div>
-            {events.map(event => (
-              <div key={event.id} style={{ marginBottom: '20px', padding: '16px', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <div>
-                    <h3 style={{ marginBottom: '4px' }}>{event.name}</h3>
-                    <p style={{ color: '#666', fontSize: '14px' }}>
-                      Code: <strong>{event.code}</strong> | {event.request_count || 0} Liedwünsche
-                    </p>
-                  </div>
-                  <div>
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => loadRequests(event)}
-                      style={{ marginRight: '8px' }}
-                    >
-                      Liedwünsche anzeigen
-                    </button>
-                    <button
-                      className="btn btn-danger"
-                      onClick={() => deleteEvent(event.id)}
-                    >
-                      Löschen
-                    </button>
-                  </div>
+      <div style={{ display: 'grid', gridTemplateColumns: selectedEvent ? '300px 1fr' : '1fr', gap: '20px' }}>
+        {/* Event-Liste */}
+        <div className="card" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+          <h2 style={{ marginBottom: '16px' }}>Veranstaltungen</h2>
+          {events.length === 0 ? (
+            <p style={{ color: '#666' }}>Noch keine Veranstaltungen erstellt.</p>
+          ) : (
+            <div>
+              {events.map(event => (
+                <div
+                  key={event.id}
+                  className={`event-list-item ${selectedEvent?.id === event.id ? 'active' : ''}`}
+                  onClick={() => selectEvent(event)}
+                  style={{
+                    padding: '16px',
+                    marginBottom: '8px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    border: selectedEvent?.id === event.id ? '2px solid #667eea' : '1px solid #e0e0e0',
+                    background: selectedEvent?.id === event.id ? '#f0f4ff' : 'white',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <h3 style={{ marginBottom: '8px', fontSize: '18px' }}>{event.name}</h3>
+                  <p style={{ color: '#666', fontSize: '12px', marginBottom: '4px' }}>
+                    Code: <strong>{event.code}</strong>
+                  </p>
+                  <p style={{ color: '#667eea', fontSize: '14px', fontWeight: '600' }}>
+                    {event.request_count || 0} Liedwünsche
+                  </p>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-                {selectedEvent?.id === event.id && (
-                  <div style={{ marginTop: '20px', padding: '20px', background: '#f8f9fa', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                      <h3>QR-Code für Gäste</h3>
-                      <button className="btn btn-secondary" onClick={refreshRequests}>
-                        Aktualisieren
-                      </button>
-                    </div>
-
-                    <div className="qr-code-container">
-                      <QRCodeSVG value={getQRCodeUrl(event.code)} size={200} />
-                      <p style={{ marginTop: '16px', fontSize: '14px', color: '#666' }}>
-                        URL: <a href={getQRCodeUrl(event.code)} target="_blank" rel="noopener noreferrer">
-                          {getQRCodeUrl(event.code)}
-                        </a>
-                      </p>
-                    </div>
-
-                    <h3 style={{ marginTop: '30px', marginBottom: '16px' }}>Liedwünsche</h3>
-                    {requests.length === 0 ? (
-                      <p>Noch keine Liedwünsche.</p>
-                    ) : (
-                      <div>
-                        {requests.map(request => (
-                          <div key={request.id} className="request-item">
-                            <div className="request-info">
-                              <div className="request-title">{request.title}</div>
-                              <div className="request-artist">{request.artist}</div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                              <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                                {request.votes} Votes
-                              </span>
-                              <button
-                                className="btn btn-danger"
-                                onClick={() => deleteRequest(request.id)}
-                              >
-                                Gespielt ✓
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+        {/* Event-Details / Liedwünsche */}
+        {selectedEvent && (
+          <div className="card" style={{ maxHeight: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '2px solid #e0e0e0' }}>
+              <div>
+                <h2 style={{ marginBottom: '4px' }}>{selectedEvent.name}</h2>
+                <p style={{ color: '#666', fontSize: '14px' }}>
+                  Code: <strong>{selectedEvent.code}</strong>
+                </p>
               </div>
-            ))}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowQRCode(!showQRCode)}
+                >
+                  {showQRCode ? 'QR-Code verbergen' : 'QR-Code anzeigen'}
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    if (window.confirm('Möchten Sie diese Veranstaltung wirklich löschen?')) {
+                      deleteEvent(selectedEvent.id);
+                      setSelectedEvent(null);
+                      setShowQRCode(false);
+                    }
+                  }}
+                >
+                  Löschen
+                </button>
+              </div>
+            </div>
+
+            {showQRCode && (
+              <div style={{ marginBottom: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+                <h3 style={{ marginBottom: '16px' }}>QR-Code für Gäste</h3>
+                <QRCodeSVG value={getQRCodeUrl(selectedEvent.code)} size={200} />
+                <p style={{ marginTop: '16px', fontSize: '14px', color: '#666' }}>
+                  URL: <a href={getQRCodeUrl(selectedEvent.code)} target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+                    {getQRCodeUrl(selectedEvent.code)}
+                  </a>
+                </p>
+              </div>
+            )}
+
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3>Liedwünsche ({requests.length})</h3>
+                <span style={{ fontSize: '12px', color: '#666' }}>Aktualisiert sich automatisch</span>
+              </div>
+              {requests.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                  <p style={{ fontSize: '18px', marginBottom: '8px' }}>Noch keine Liedwünsche</p>
+                  <p style={{ fontSize: '14px' }}>Sobald Gäste Lieder wünschen, erscheinen sie hier.</p>
+                </div>
+              ) : (
+                <div className="requests-list">
+                  {requests.map((request, index) => (
+                    <div
+                      key={request.id}
+                      className="request-item-dj"
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '20px',
+                        marginBottom: '12px',
+                        background: index === 0 ? '#fff9e6' : 'white',
+                        border: index === 0 ? '2px solid #ffd700' : '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        boxShadow: index === 0 ? '0 4px 8px rgba(255, 215, 0, 0.2)' : '0 2px 4px rgba(0,0,0,0.05)',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      <div className="request-info" style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                          {index === 0 && (
+                            <span style={{
+                              background: '#ffd700',
+                              color: '#333',
+                              padding: '4px 12px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              #1
+                            </span>
+                          )}
+                          <div className="request-title" style={{ fontSize: '20px', fontWeight: '600' }}>
+                            {request.title}
+                          </div>
+                        </div>
+                        <div className="request-artist" style={{ fontSize: '16px', color: '#666' }}>
+                          {request.artist}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#667eea' }}>
+                            {request.votes}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>Votes</div>
+                        </div>
+                        <button
+                          className="btn btn-success"
+                          onClick={() => deleteRequest(request.id)}
+                          style={{ padding: '10px 20px' }}
+                        >
+                          ✓ Gespielt
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!selectedEvent && (
+          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+            <div style={{ textAlign: 'center', color: '#666' }}>
+              <p style={{ fontSize: '20px', marginBottom: '8px' }}>Wähle eine Veranstaltung aus</p>
+              <p style={{ fontSize: '14px' }}>Klicke auf eine Veranstaltung in der Liste, um die Liedwünsche anzuzeigen</p>
+            </div>
           </div>
         )}
       </div>
