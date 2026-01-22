@@ -222,7 +222,6 @@ function DJDashboard() {
     
     const qrUrl = masterQRCode.url;
     const dataUrl = masterQRCode.qrCode;
-    const eventName = masterQRCode.event.name;
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -234,7 +233,7 @@ function DJDashboard() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Master QR-Code - ${eventName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+          <title>Master QR-Code - DJ ${djUsername.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
           <style>
             * {
               margin: 0;
@@ -865,6 +864,7 @@ function DJDashboard() {
                   className="btn btn-primary"
                   onClick={() => printMasterQRCode()}
                   style={{ marginTop: '20px' }}
+                  disabled={!masterQRCode}
                 >
                   🖨️ Master QR-Code drucken
                 </button>
