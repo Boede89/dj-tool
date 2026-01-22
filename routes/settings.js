@@ -88,4 +88,18 @@ router.put('/music-source', async (req, res) => {
   }
 });
 
+// Aktive Veranstaltung abrufen
+router.get('/active-event', async (req, res) => {
+  try {
+    const activeEvent = await db.get(
+      'SELECT * FROM events WHERE dj_id = ? AND is_active = 1',
+      [req.djId]
+    );
+    res.json(activeEvent || null);
+  } catch (error) {
+    console.error('Fehler beim Abrufen der aktiven Veranstaltung:', error);
+    res.status(500).json({ error: 'Fehler beim Abrufen der aktiven Veranstaltung' });
+  }
+});
+
 module.exports = router;

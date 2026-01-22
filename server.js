@@ -39,6 +39,69 @@ app.get('/api/qr/:eventCode', async (req, res) => {
   }
 });
 
+// Master QR-Code Endpunkt (für aktive Veranstaltung)
+app.get('/api/dj/master-qr', async (req, res) => {
+  try {
+    const jwt = require('jsonwebtoken');
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Kein Token bereitgestellt' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const djId = decoded.djId;
+
+    // Aktive Veranstaltung finden
+    const activeEvent = await db.get(
+      'SELECT * FROM events WHERE dj_id = ? AND is_active = 1',
+      [djId]
+    );
+
+    if (!activeEvent) {
+      return res.status(404).json({ error: 'Keine aktive Veranstaltung gefunden' });
+    }
+
+    const QRCode = require('qrcode');
+    const masterUrl = `${req.protocol}://${req.get('host')}/dj/${decoded.username}/active`;
+    const qrCodeDataUrl = await QRCode.toDataURL(masterUrl);
+    res.json({ qrCode: qrCodeDataUrl, url: masterUrl, event: activeEvent });
+  } catch (error) {
+    console.error('Fehler beim Generieren des Master-QR-Codes:', error);
+    res.status(500).json({ error: 'Fehler beim Generieren des Master-QR-Codes' });
+  }
+});
+
+// Master-Route für aktive Veranstaltung (öffentlich)
+app.get('/dj/:username/active', async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    // DJ finden
+    const dj = await db.get('SELECT id FROM djs WHERE username = ?', [username]);
+    if (!dj) {
+      return res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+    }
+
+    // Aktive Veranstaltung finden
+    const activeEvent = await db.get(
+      'SELECT * FROM events WHERE dj_id = ? AND is_active = 1',
+      [dj.id]
+    );
+
+    if (activeEvent) {
+      // Weiterleitung zur aktiven Veranstaltung
+      res.redirect(`/event/${activeEvent.code}`);
+    } else {
+      // Keine aktive Veranstaltung - Frontend zeigt Meldung
+      res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+    }
+  } catch (error) {
+    console.error('Fehler bei Master-Route:', error);
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  }
+});
+
 // Frontend Routes (React App) - müssen VOR den API Routes kommen, aber nach express.static
 // Root Route
 app.get('/', (req, res) => {

@@ -69,10 +69,22 @@ const createTables = () => {
           dj_id INTEGER NOT NULL,
           name TEXT NOT NULL,
           code TEXT UNIQUE NOT NULL,
+          is_active INTEGER DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (dj_id) REFERENCES djs(id)
         )
-      `);
+      `, (err) => {
+        if (err) {
+          console.error('Fehler beim Erstellen der events Tabelle:', err);
+        } else {
+          // Spalte hinzufügen falls Tabelle bereits existiert
+          db.run(`ALTER TABLE events ADD COLUMN is_active INTEGER DEFAULT 0`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              console.error('Fehler beim Hinzufügen der is_active Spalte:', err);
+            }
+          });
+        }
+      });
 
       // Liedwünsche Tabelle
       db.run(`

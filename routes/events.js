@@ -115,4 +115,33 @@ router.delete('/:eventId/requests/:requestId', async (req, res) => {
   }
 });
 
+// Veranstaltung aktivieren/deaktivieren
+router.put('/:id/active', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    // Prüfen ob Veranstaltung dem DJ gehört
+    const event = await db.get('SELECT * FROM events WHERE id = ? AND dj_id = ?', [id, req.djId]);
+    if (!event) {
+      return res.status(404).json({ error: 'Veranstaltung nicht gefunden' });
+    }
+
+    if (isActive) {
+      // Alle anderen Veranstaltungen des DJs deaktivieren
+      await db.run('UPDATE events SET is_active = 0 WHERE dj_id = ?', [req.djId]);
+      // Diese Veranstaltung aktivieren
+      await db.run('UPDATE events SET is_active = 1 WHERE id = ?', [id]);
+    } else {
+      // Veranstaltung deaktivieren
+      await db.run('UPDATE events SET is_active = 0 WHERE id = ?', [id]);
+    }
+
+    res.json({ message: 'Veranstaltungsstatus aktualisiert' });
+  } catch (error) {
+    console.error('Fehler beim Aktualisieren des Veranstaltungsstatus:', error);
+    res.status(500).json({ error: 'Fehler beim Aktualisieren des Veranstaltungsstatus' });
+  }
+});
+
 module.exports = router;

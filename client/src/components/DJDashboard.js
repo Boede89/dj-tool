@@ -22,6 +22,8 @@ function DJDashboard() {
   const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
   const [hasSpotifyCredentials, setHasSpotifyCredentials] = useState(false);
   const [musicSource, setMusicSource] = useState('itunes');
+  const [activeEvent, setActiveEvent] = useState(null);
+  const [masterQRCode, setMasterQRCode] = useState(null);
   const navigate = useNavigate();
   const refreshIntervalRef = useRef(null);
   const qrCodeRef = useRef(null);
@@ -36,14 +38,56 @@ function DJDashboard() {
     loadSettings();
   }, [navigate]);
 
+  useEffect(() => {
+    // Aktive Veranstaltung und Master-QR-Code aktualisieren wenn Events geladen werden
+    if (events.length > 0) {
+      loadActiveEvent();
+      loadMasterQRCode();
+    }
+  }, [events]);
+
   const loadSettings = async () => {
     try {
       const response = await api.get('/api/dj/settings');
       setHasSpotifyCredentials(response.data.hasSpotifyCredentials);
       setMusicSource(response.data.musicSource || 'itunes');
       setDjUsername(response.data.username);
+      await loadActiveEvent();
+      await loadMasterQRCode();
     } catch (err) {
       console.error('Fehler beim Laden der Einstellungen:', err);
+    }
+  };
+
+  const loadActiveEvent = async () => {
+    try {
+      const response = await api.get('/api/dj/settings/active-event');
+      setActiveEvent(response.data);
+    } catch (err) {
+      console.error('Fehler beim Laden der aktiven Veranstaltung:', err);
+    }
+  };
+
+  const loadMasterQRCode = async () => {
+    try {
+      const response = await api.get('/api/dj/master-qr');
+      setMasterQRCode(response.data);
+    } catch (err) {
+      // Keine aktive Veranstaltung - das ist okay
+      setMasterQRCode(null);
+    }
+  };
+
+  const toggleEventActive = async (eventId, isActive) => {
+    try {
+      await api.put(`/api/dj/events/${eventId}/active`, { isActive });
+      await loadEvents();
+      await loadActiveEvent();
+      await loadMasterQRCode();
+      setSuccess(isActive ? 'Veranstaltung aktiviert' : 'Veranstaltung deaktiviert');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Ändern des Veranstaltungsstatus');
     }
   };
 
@@ -171,6 +215,208 @@ function DJDashboard() {
 
   const getQRCodeUrl = (eventCode) => {
     return `${window.location.origin}/event/${eventCode}`;
+  };
+
+  const printMasterQRCode = () => {
+    if (!masterQRCode) return;
+    
+    const qrUrl = masterQRCode.url;
+    const dataUrl = masterQRCode.qrCode;
+    const eventName = masterQRCode.event.name;
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      setError('Pop-up-Blocker verhindert das Öffnen des Druckfensters. Bitte Pop-ups für diese Seite erlauben.');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Master QR-Code - ${eventName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            @media print {
+              body { 
+                margin: 0; 
+                padding: 0; 
+                background: white;
+              }
+              .no-print { display: none; }
+              @page {
+                margin: 15mm;
+                size: A4;
+              }
+              .qr-container {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+              }
+            }
+            @media screen {
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              }
+            }
+            .qr-container {
+              text-align: center;
+              padding: 60px 50px;
+              background: white;
+              border-radius: 20px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+              max-width: 600px;
+              width: 100%;
+            }
+            .event-header {
+              margin-bottom: 30px;
+              padding-bottom: 25px;
+              border-bottom: 3px solid #667eea;
+            }
+            h1 {
+              margin-bottom: 15px;
+              color: #333;
+              font-size: 32px;
+              font-weight: 700;
+              letter-spacing: -0.5px;
+            }
+            .dj-name {
+              font-size: 20px;
+              font-weight: 600;
+              color: #667eea;
+              margin-bottom: 8px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .subtitle {
+              margin-top: 15px;
+              color: #666;
+              font-size: 18px;
+              font-weight: 400;
+            }
+            .master-badge {
+              display: inline-block;
+              padding: 8px 16px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border-radius: 20px;
+              font-size: 14px;
+              font-weight: 600;
+              margin-bottom: 20px;
+            }
+            .qr-wrapper {
+              margin: 40px 0;
+              padding: 30px;
+              background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+              border-radius: 16px;
+              border: 2px dashed #667eea;
+              display: inline-block;
+            }
+            .qr-image {
+              display: block;
+              margin: 0 auto;
+              max-width: 350px;
+              width: 100%;
+              height: auto;
+              border-radius: 12px;
+              box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            }
+            .instruction {
+              margin-top: 35px;
+              padding: 20px;
+              background: #f0f4ff;
+              border-radius: 12px;
+              border-left: 4px solid #667eea;
+            }
+            .instruction-text {
+              font-size: 16px;
+              color: #555;
+              line-height: 1.6;
+              font-weight: 500;
+            }
+            .instruction-icon {
+              font-size: 24px;
+              margin-bottom: 10px;
+            }
+            .print-button {
+              margin-top: 30px;
+              padding: 16px 40px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              border-radius: 12px;
+              font-size: 18px;
+              font-weight: 600;
+              cursor: pointer;
+              box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+              transition: all 0.3s;
+            }
+            .print-button:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            }
+            .print-button:active {
+              transform: translateY(0);
+            }
+            .decorative-line {
+              width: 80px;
+              height: 4px;
+              background: linear-gradient(90deg, #667eea, #764ba2);
+              margin: 25px auto;
+              border-radius: 2px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <div class="event-header">
+              <div class="master-badge">MASTER QR-CODE</div>
+              <div class="dj-name">DJ ${djUsername.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+              <h1>${eventName.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+              <div class="decorative-line"></div>
+              <p class="subtitle">Führt zur aktiven Veranstaltung</p>
+            </div>
+            
+            <div class="qr-wrapper">
+              <img src="${dataUrl}" alt="QR-Code" class="qr-image" />
+            </div>
+            
+            <div class="instruction">
+              <div class="instruction-icon">📱</div>
+              <div class="instruction-text">
+                Scanne den QR-Code mit deinem Smartphone<br>
+                um zur aktiven Veranstaltung zu gelangen
+              </div>
+            </div>
+            
+            <button class="print-button no-print" onclick="window.print()">🖨️ Drucken</button>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(() => {
+                window.print();
+              }, 500);
+            };
+            window.onafterprint = function() {
+              setTimeout(() => window.close(), 100);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const printQRCode = () => {
@@ -585,6 +831,42 @@ function DJDashboard() {
                 </label>
               </div>
             </div>
+          </div>
+
+          <div style={{ marginBottom: '30px', paddingTop: '30px', borderTop: '1px solid #e0e0e0' }}>
+            <h3 style={{ marginBottom: '16px' }}>Master QR-Code</h3>
+            <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
+              Dieser QR-Code führt immer zur aktiven Veranstaltung. Du kannst ihn einmal ausdrucken und immer wieder verwenden.
+            </p>
+
+            {masterQRCode ? (
+              <div style={{ textAlign: 'center', padding: '30px', background: '#f8f9fa', borderRadius: '12px', marginBottom: '20px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <strong style={{ color: '#667eea', fontSize: '16px' }}>
+                    Aktive Veranstaltung: {masterQRCode.event.name}
+                  </strong>
+                </div>
+                <img src={masterQRCode.qrCode} alt="Master QR-Code" style={{ maxWidth: '250px', width: '100%', height: 'auto' }} />
+                <p style={{ marginTop: '16px', fontSize: '14px', color: '#666' }}>
+                  URL: <a href={masterQRCode.url} target="_blank" rel="noopener noreferrer" style={{ color: '#667eea' }}>
+                    {masterQRCode.url}
+                  </a>
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => printMasterQRCode()}
+                  style={{ marginTop: '20px' }}
+                >
+                  🖨️ Master QR-Code drucken
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '20px', background: '#fff3cd', borderRadius: '8px', color: '#856404', textAlign: 'center' }}>
+                <p style={{ margin: 0 }}>
+                  ⚠️ Keine aktive Veranstaltung. Aktiviere eine Veranstaltung, um den Master QR-Code zu erhalten.
+                </p>
+              </div>
+            )}
           </div>
 
           <div style={{ marginBottom: '30px', paddingTop: '30px', borderTop: '1px solid #e0e0e0' }}>
