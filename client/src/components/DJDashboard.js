@@ -174,70 +174,131 @@ function DJDashboard() {
   const printQRCode = () => {
     if (!selectedEvent) return;
     
-    const printWindow = window.open('', '_blank');
     const qrUrl = getQRCodeUrl(selectedEvent.code);
     
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>QR-Code - ${selectedEvent.name}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              padding: 20px;
-            }
-            .qr-container {
-              text-align: center;
-            }
-            h1 {
-              margin-bottom: 10px;
-              color: #333;
-            }
-            p {
-              margin: 5px 0;
-              color: #666;
-            }
-            .url {
-              font-size: 14px;
-              word-break: break-all;
-              margin-top: 20px;
-            }
-            @media print {
-              body { margin: 0; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="qr-container">
-            <h1>${selectedEvent.name}</h1>
-            <p>Scanne den QR-Code für Liedwünsche</p>
-            <div id="qrcode"></div>
-            <p class="url">${qrUrl}</p>
-          </div>
-          <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-          <script>
-            QRCode.toCanvas(document.getElementById('qrcode'), '${qrUrl}', {
-              width: 400,
-              margin: 2
-            }, function (error) {
-              if (error) console.error(error);
-              setTimeout(() => {
-                window.print();
-                window.onafterprint = () => window.close();
-              }, 500);
-            });
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    // QR-Code vom Backend als Data URL abrufen
+    api.get(`/api/qr/${selectedEvent.code}`)
+      .then(response => {
+        const dataUrl = response.data.qrCode;
+        
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+          setError('Pop-up-Blocker verhindert das Öffnen des Druckfensters. Bitte Pop-ups für diese Seite erlauben.');
+          return;
+        }
+
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>QR-Code - ${selectedEvent.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+              <style>
+                @media print {
+                  body { 
+                    margin: 0; 
+                    padding: 0; 
+                  }
+                  .no-print { display: none; }
+                  @page {
+                    margin: 20mm;
+                  }
+                }
+                @media screen {
+                  body { 
+                    font-family: Arial, sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    padding: 20px;
+                    background: #f5f5f5;
+                  }
+                }
+                .qr-container {
+                  text-align: center;
+                  padding: 40px;
+                  background: white;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                h1 {
+                  margin-bottom: 20px;
+                  color: #333;
+                  font-size: 28px;
+                }
+                p {
+                  margin: 10px 0;
+                  color: #666;
+                  font-size: 16px;
+                }
+                .qr-image {
+                  margin: 20px auto;
+                  display: block;
+                  border: 4px solid #000;
+                  padding: 10px;
+                  background: white;
+                  max-width: 400px;
+                  width: 100%;
+                  height: auto;
+                }
+                .url {
+                  font-size: 14px;
+                  word-break: break-all;
+                  margin-top: 30px;
+                  padding: 10px;
+                  background: #f5f5f5;
+                  border-radius: 4px;
+                  max-width: 500px;
+                  margin-left: auto;
+                  margin-right: auto;
+                }
+                .print-button {
+                  margin-top: 20px;
+                  padding: 12px 24px;
+                  background: #667eea;
+                  color: white;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 16px;
+                  cursor: pointer;
+                }
+                .print-button:hover {
+                  background: #5568d3;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="qr-container">
+                <h1>${selectedEvent.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+                <p>Scanne den QR-Code für Liedwünsche</p>
+                <img src="${dataUrl}" alt="QR-Code" class="qr-image" />
+                <p class="url">${qrUrl}</p>
+                <button class="print-button no-print" onclick="window.print()">Drucken</button>
+              </div>
+              <script>
+                // Automatisch Druck-Dialog öffnen nach kurzer Verzögerung
+                window.onload = function() {
+                  setTimeout(() => {
+                    window.print();
+                  }, 500);
+                };
+                
+                // Fenster schließen nach Druck (falls unterstützt)
+                window.onafterprint = function() {
+                  setTimeout(() => window.close(), 100);
+                };
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      })
+      .catch(err => {
+        console.error('Fehler beim Abrufen des QR-Codes:', err);
+        setError('Fehler beim Generieren des QR-Codes');
+      });
   };
 
   const loadArchive = async () => {
