@@ -567,16 +567,30 @@ function DJDashboard() {
 
       {showArchive && (
         <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px', width: '100%' }}>
-          <div className="card" style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', position: 'sticky', top: 0, background: 'white', zIndex: 10, paddingBottom: '16px', borderBottom: '1px solid #e0e0e0' }}>
-              <h2 style={{ margin: 0 }}>Veranstaltungen</h2>
+          <div className="card" style={{ position: 'relative', overflow: 'visible' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: '16px',
+              paddingBottom: '16px', 
+              borderBottom: '1px solid #e0e0e0',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              <h2 style={{ margin: 0, flex: 1 }}>Veranstaltungen</h2>
               <button
                 className="btn btn-secondary"
                 onClick={() => {
                   setShowArchive(false);
                   setSelectedArchiveEvent(null);
                 }}
-                style={{ flexShrink: 0 }}
+                style={{ 
+                  flexShrink: 0,
+                  marginLeft: '12px',
+                  position: 'relative',
+                  zIndex: 2
+                }}
               >
                 Schließen
               </button>
