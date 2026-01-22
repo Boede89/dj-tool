@@ -512,8 +512,8 @@ function DJDashboard() {
 
       {!showCreateForm && !showSettings && !showArchive && (
         <div style={{ display: 'grid', gridTemplateColumns: selectedEvent ? '300px 1fr' : '1fr', gap: '20px' }}>
-        {/* Event-Liste */}
-        <div className="card" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+          {/* Event-Liste */}
+          <div className="card" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           <h2 style={{ marginBottom: '16px' }}>Veranstaltungen</h2>
           {events.length === 0 ? (
             <p style={{ color: '#666' }}>Noch keine Veranstaltungen erstellt.</p>
@@ -681,7 +681,8 @@ function DJDashboard() {
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

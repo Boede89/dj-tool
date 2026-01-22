@@ -37,6 +37,12 @@ app.get('/api/qr/:eventCode', async (req, res) => {
   }
 });
 
+// Frontend Routes (React App) - müssen VOR den API Routes kommen, aber nach express.static
+// Root Route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
+
 // Frontend Routes (React App)
 app.get('/event/:code', (req, res) => {
   res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
@@ -46,9 +52,14 @@ app.get('/dj/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 
-// Root Route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+// Catch-all Route für alle anderen Frontend-Routes (muss am Ende stehen)
+app.get('*', (req, res) => {
+  // Nur wenn es keine API-Route ist
+  if (!req.path.startsWith('/api/')) {
+    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  } else {
+    res.status(404).json({ error: 'Not Found' });
+  }
 });
 
 // Datenbank initialisieren
