@@ -6,7 +6,13 @@ const router = express.Router();
 // Event-Details abrufen (öffentlich)
 router.get('/:code', async (req, res) => {
   try {
-    const event = await db.get('SELECT * FROM events WHERE code = ?', [req.params.code]);
+    const event = await db.get(
+      `SELECT e.*, d.username as dj_username 
+       FROM events e 
+       JOIN djs d ON e.dj_id = d.id 
+       WHERE e.code = ?`,
+      [req.params.code]
+    );
     if (!event) {
       return res.status(404).json({ error: 'Veranstaltung nicht gefunden' });
     }

@@ -13,6 +13,7 @@ function DJDashboard() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [requests, setRequests] = useState([]);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [djUsername, setDjUsername] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [archive, setArchive] = useState([]);
@@ -40,6 +41,7 @@ function DJDashboard() {
       const response = await api.get('/api/dj/settings');
       setHasSpotifyCredentials(response.data.hasSpotifyCredentials);
       setMusicSource(response.data.musicSource || 'itunes');
+      setDjUsername(response.data.username);
     } catch (err) {
       console.error('Fehler beim Laden der Einstellungen:', err);
     }
@@ -272,9 +274,9 @@ function DJDashboard() {
             <body>
               <div class="qr-container">
                 <h1>${selectedEvent.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+                <p style="font-size: 18px; font-weight: 600; color: #667eea; margin-bottom: 10px;">DJ ${djUsername.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
                 <p>Scanne den QR-Code für Liedwünsche</p>
                 <img src="${dataUrl}" alt="QR-Code" class="qr-image" />
-                <p class="url">${qrUrl}</p>
                 <button class="print-button no-print" onclick="window.print()">Drucken</button>
               </div>
               <script>

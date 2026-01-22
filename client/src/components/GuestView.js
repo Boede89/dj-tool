@@ -124,18 +124,18 @@ function GuestView() {
 
   return (
     <div className="container">
-      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: 'white', marginBottom: '8px' }}>{event.name}</h1>
-        <p style={{ color: 'white', fontSize: '18px' }}>Liedwünsche</p>
+      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+        <h1 style={{ color: 'white', marginBottom: '12px', fontSize: '36px', fontWeight: '700' }}>{event.name}</h1>
+        <p style={{ color: 'white', fontSize: '20px', opacity: 0.9 }}>Liedwünsche</p>
       </div>
 
-      <div className="card">
-        <h2>Lied wünschen</h2>
+      <div className="card" style={{ marginBottom: '24px', boxShadow: '0 8px 16px rgba(0,0,0,0.15)' }}>
+        <h2 style={{ marginBottom: '24px', fontSize: '24px', color: '#333' }}>🎵 Lied wünschen</h2>
         {error && <div className="error">{error}</div>}
 
         <form onSubmit={submitRequest}>
           <div className="form-group">
-            <label>Musik suchen (Spotify)</label>
+            <label>Musik suchen</label>
             <input
               type="text"
               value={searchQuery}
@@ -183,39 +183,114 @@ function GuestView() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-            Lied wünschen
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '18px', padding: '14px', marginTop: '8px' }}>
+            ✨ Lied wünschen
           </button>
         </form>
       </div>
 
-      <div className="card">
-        <h2>Liedwünsche ({requests.length})</h2>
+      <div className="card" style={{ boxShadow: '0 8px 16px rgba(0,0,0,0.15)' }}>
+        <h2 style={{ marginBottom: '24px', fontSize: '24px', color: '#333' }}>
+          📋 Liedwünsche ({requests.length})
+        </h2>
         {requests.length === 0 ? (
-          <p>Noch keine Liedwünsche. Sei der Erste!</p>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            <p style={{ fontSize: '18px', marginBottom: '8px' }}>🎵 Noch keine Liedwünsche</p>
+            <p style={{ fontSize: '14px' }}>Sei der Erste und wünsche dein Lieblingslied!</p>
+          </div>
         ) : (
           <div>
             {requests.map(request => (
-              <div key={request.id} className="request-item">
-                <div className="request-info">
-                  <div className="request-title">{request.title}</div>
-                  <div className="request-artist">{request.artist}</div>
+              <div 
+                key={request.id} 
+                className="request-item"
+                style={{
+                  padding: '20px',
+                  marginBottom: '16px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                  border: '1px solid #e0e0e0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <div className="request-info" style={{ flex: 1 }}>
+                  <div className="request-title" style={{ fontSize: '20px', fontWeight: '600', marginBottom: '8px', color: '#333' }}>
+                    {request.title}
+                  </div>
+                  <div className="request-artist" style={{ fontSize: '16px', color: '#666' }}>
+                    {request.artist}
+                  </div>
                 </div>
-                <div className="vote-buttons">
+                <div className="vote-buttons" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button
                     className="vote-btn up"
                     onClick={() => vote(request.id, 'up')}
                     title="Hoch voten"
+                    style={{
+                      fontSize: '24px',
+                      padding: '12px 16px',
+                      borderRadius: '50%',
+                      width: '50px',
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#27ae60',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 4px rgba(39, 174, 96, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.1)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(39, 174, 96, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 4px rgba(39, 174, 96, 0.3)';
+                    }}
                   >
-                    ↑
+                    👍
                   </button>
-                  <div className="vote-count">{request.votes}</div>
+                  <div className="vote-count" style={{ 
+                    fontSize: '24px', 
+                    fontWeight: 'bold', 
+                    minWidth: '50px', 
+                    textAlign: 'center',
+                    color: '#667eea'
+                  }}>
+                    {request.votes}
+                  </div>
                   <button
                     className="vote-btn down"
                     onClick={() => vote(request.id, 'down')}
                     title="Runter voten"
+                    style={{
+                      fontSize: '24px',
+                      padding: '12px 16px',
+                      borderRadius: '50%',
+                      width: '50px',
+                      height: '50px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#e74c3c',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 4px rgba(231, 76, 60, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'scale(1.1)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(231, 76, 60, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'scale(1)';
+                      e.target.style.boxShadow = '0 2px 4px rgba(231, 76, 60, 0.3)';
+                    }}
                   >
-                    ↓
+                    👎
                   </button>
                 </div>
               </div>
