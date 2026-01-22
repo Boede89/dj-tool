@@ -564,16 +564,17 @@ function DJDashboard() {
       )}
 
       {showArchive && (
-        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px' }}>
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2>Veranstaltungen</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px', width: '100%' }}>
+          <div className="card" style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', position: 'sticky', top: 0, background: 'white', zIndex: 10, paddingBottom: '16px', borderBottom: '1px solid #e0e0e0' }}>
+              <h2 style={{ margin: 0 }}>Veranstaltungen</h2>
               <button
                 className="btn btn-secondary"
                 onClick={() => {
                   setShowArchive(false);
                   setSelectedArchiveEvent(null);
                 }}
+                style={{ flexShrink: 0 }}
               >
                 Schließen
               </button>
@@ -612,14 +613,15 @@ function DJDashboard() {
           </div>
 
           {selectedArchiveEvent && (
-            <div className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2>
+            <div className="card" style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '2px solid #e0e0e0', position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
+                <h2 style={{ margin: 0 }}>
                   {archive.find(e => e.event_code === selectedArchiveEvent)?.event_name || 'Unbekannte Veranstaltung'}
                 </h2>
                 <button
                   className="btn btn-danger"
                   onClick={() => deleteArchiveEvent(selectedArchiveEvent)}
+                  style={{ flexShrink: 0 }}
                 >
                   Veranstaltung löschen
                 </button>
