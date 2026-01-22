@@ -112,24 +112,23 @@ router.post('/:code/requests/:requestId/vote', async (req, res) => {
     );
 
     if (existingVote) {
-      // Wenn bereits ein Vote existiert (z.B. automatischer "up" Vote vom Erstellen)
-      // darf diese IP nicht mehr voten, da sie bereits durch das Erstellen "hoch gevotet" hat
-      if (existingVote.vote_type === 'up') {
-        return res.status(400).json({ error: 'Du hast dieses Lied bereits gewünscht und kannst daher nicht mehr voten' });
+      // Wenn bereits der gleiche Vote-Typ gewählt wurde, nichts tun
+      if (existingVote.vote_type === voteType) {
+        return res.status(400).json({ error: `Du hast bereits ${voteType === 'up' ? 'hoch' : 'runter'} gevotet` });
       }
       
-      // Wenn bereits "down" gevotet wurde, kann zu "up" geändert werden
-      if (existingVote.vote_type === 'down' && voteType === 'up') {
-        await db.run(
-          'UPDATE votes SET vote_type = ? WHERE request_id = ? AND ip_address = ?',
-          ['up', requestId, ipAddress]
-        );
-        await db.run('UPDATE requests SET votes = votes + 2 WHERE id = ?', [requestId]);
-      } else if (existingVote.vote_type === 'down' && voteType === 'down') {
-        return res.status(400).json({ error: 'Du hast bereits runter gevotet' });
-      }
+      // Vote-Typ ändern
+      // Von "up" zu "down": votes -2 (von +1 zu -1 = -2)
+      // Von "down" zu "up": votes +2 (von -1 zu +1 = +2)
+      await db.run(
+        'UPDATE votes SET vote_type = ? WHERE request_id = ? AND ip_address = ?',
+        [voteType, requestId, ipAddress]
+      );
+      
+      const voteChange = existingVote.vote_type === 'up' ? -2 : 2;
+      await db.run('UPDATE requests SET votes = votes + ? WHERE id = ?', [voteChange, requestId]);
     } else {
-      // Neuer Vote (nur möglich wenn die IP nicht der Erstellen ist)
+      // Neuer Vote
       await db.run(
         'INSERT INTO votes (request_id, ip_address, vote_type) VALUES (?, ?, ?)',
         [requestId, ipAddress, voteType]
