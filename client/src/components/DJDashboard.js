@@ -19,6 +19,7 @@ function DJDashboard() {
   const [spotifyClientId, setSpotifyClientId] = useState('');
   const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
   const [hasSpotifyCredentials, setHasSpotifyCredentials] = useState(false);
+  const [musicSource, setMusicSource] = useState('itunes');
   const navigate = useNavigate();
   const refreshIntervalRef = useRef(null);
   const qrCodeRef = useRef(null);
@@ -37,6 +38,7 @@ function DJDashboard() {
     try {
       const response = await api.get('/api/dj/settings');
       setHasSpotifyCredentials(response.data.hasSpotifyCredentials);
+      setMusicSource(response.data.musicSource || 'itunes');
     } catch (err) {
       console.error('Fehler beim Laden der Einstellungen:', err);
     }
@@ -70,6 +72,17 @@ function DJDashboard() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError('Fehler beim Löschen der Spotify Credentials');
+    }
+  };
+
+  const saveMusicSource = async (source) => {
+    try {
+      await api.put('/api/dj/settings/music-source', { musicSource: source });
+      setMusicSource(source);
+      setSuccess('Musikdatenbank-Quelle erfolgreich geändert');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Ändern der Musikdatenbank-Quelle');
     }
   };
 
@@ -372,6 +385,69 @@ function DJDashboard() {
           </div>
 
           <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ marginBottom: '16px' }}>Musikdatenbank</h3>
+            <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
+              Wähle die Musikdatenbank, die für die Suche verwendet werden soll.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600' }}>
+                Datenbank-Quelle
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="musicSource"
+                    value="itunes"
+                    checked={musicSource === 'itunes'}
+                    onChange={(e) => saveMusicSource(e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <strong>iTunes/Apple Music</strong> (Empfohlen)
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Kostenlos, keine API-Keys erforderlich, große Datenbank
+                    </div>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="musicSource"
+                    value="musicbrainz"
+                    checked={musicSource === 'musicbrainz'}
+                    onChange={(e) => saveMusicSource(e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <strong>MusicBrainz</strong>
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Kostenlos, keine API-Keys erforderlich, offene Musikdatenbank
+                    </div>
+                  </div>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="musicSource"
+                    value="spotify"
+                    checked={musicSource === 'spotify'}
+                    onChange={(e) => saveMusicSource(e.target.value)}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <div>
+                    <strong>Spotify</strong>
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Benötigt API-Keys (aktuell nicht verfügbar), Premium-Features
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '30px', paddingTop: '30px', borderTop: '1px solid #e0e0e0' }}>
             <h3 style={{ marginBottom: '16px' }}>Spotify API Credentials</h3>
             <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
               Um die Spotify-Suche zu nutzen, benötigst du einen Spotify Developer Account.
@@ -380,6 +456,8 @@ function DJDashboard() {
                 developer.spotify.com
               </a>
               {' '}und trage hier deine Client ID und Client Secret ein.
+              <br />
+              <strong style={{ color: '#e74c3c' }}>Hinweis:</strong> Spotify erlaubt aktuell keine neuen App-Registrierungen.
             </p>
 
             {hasSpotifyCredentials && (

@@ -22,7 +22,8 @@ router.get('/', async (req, res) => {
     // Secrets nicht im Klartext senden, nur ob vorhanden
     res.json({
       username: dj.username,
-      hasSpotifyCredentials: !!(dj.spotify_client_id && dj.spotify_client_secret)
+      hasSpotifyCredentials: !!(dj.spotify_client_id && dj.spotify_client_secret),
+      musicSource: dj.music_source || 'itunes'
     });
   } catch (error) {
     console.error('Fehler beim Abrufen der Einstellungen:', error);
@@ -63,6 +64,27 @@ router.delete('/spotify', async (req, res) => {
   } catch (error) {
     console.error('Fehler beim Löschen der Spotify Credentials:', error);
     res.status(500).json({ error: 'Fehler beim Löschen der Spotify Credentials' });
+  }
+});
+
+// Musikdatenbank-Quelle ändern
+router.put('/music-source', async (req, res) => {
+  try {
+    const { musicSource } = req.body;
+
+    if (!['spotify', 'itunes', 'musicbrainz'].includes(musicSource)) {
+      return res.status(400).json({ error: 'Ungültige Musikdatenbank-Quelle' });
+    }
+
+    await db.run(
+      'UPDATE djs SET music_source = ? WHERE id = ?',
+      [musicSource, req.djId]
+    );
+
+    res.json({ message: 'Musikdatenbank-Quelle erfolgreich geändert' });
+  } catch (error) {
+    console.error('Fehler beim Ändern der Musikdatenbank-Quelle:', error);
+    res.status(500).json({ error: 'Fehler beim Ändern der Musikdatenbank-Quelle' });
   }
 });
 

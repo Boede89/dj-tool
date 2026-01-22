@@ -47,6 +47,11 @@ const createTables = () => {
               console.error('Fehler beim Hinzufügen der spotify_client_secret Spalte:', err);
             }
           });
+          db.run(`ALTER TABLE djs ADD COLUMN music_source TEXT DEFAULT 'itunes'`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              console.error('Fehler beim Hinzufügen der music_source Spalte:', err);
+            }
+          });
         }
       });
 

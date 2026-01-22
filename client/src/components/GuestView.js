@@ -41,20 +41,20 @@ function GuestView() {
     }
   };
 
-  const searchSpotify = async (query) => {
+  const searchMusic = async (query) => {
     if (!query || query.trim().length < 2) {
       setSearchResults([]);
       return;
     }
 
     try {
-      const response = await api.get(`/api/spotify/search/${code}`, {
+      const response = await api.get(`/api/music/search/${code}`, {
         params: { q: query, limit: 10 }
       });
       setSearchResults(response.data);
     } catch (err) {
-      console.error('Spotify-Suchfehler:', err);
-      // Fallback: Wenn Spotify nicht verfügbar ist, einfach leere Ergebnisse
+      console.error('Musik-Suchfehler:', err);
+      // Fallback: Leere Ergebnisse
       setSearchResults([]);
     }
   };
@@ -62,7 +62,7 @@ function GuestView() {
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    searchSpotify(value);
+    searchMusic(value);
   };
 
   const selectSong = (song) => {

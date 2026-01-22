@@ -24,6 +24,7 @@ app.use('/api/dj/settings', require('./routes/settings'));
 app.use('/api/dj/archive', require('./routes/archive'));
 app.use('/api/events', requestRoutes);
 app.use('/api/spotify', spotifyRoutes);
+app.use('/api/music', require('./routes/music'));
 
 // QR-Code Endpunkt
 app.get('/api/qr/:eventCode', async (req, res) => {
