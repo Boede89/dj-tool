@@ -195,19 +195,31 @@ function DJDashboard() {
             <head>
               <title>QR-Code - ${selectedEvent.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
               <style>
+                * {
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                }
                 @media print {
                   body { 
                     margin: 0; 
                     padding: 0; 
+                    background: white;
                   }
                   .no-print { display: none; }
                   @page {
-                    margin: 20mm;
+                    margin: 15mm;
+                    size: A4;
+                  }
+                  .qr-container {
+                    box-shadow: none;
+                    border: none;
+                    padding: 0;
                   }
                 }
                 @media screen {
                   body { 
-                    font-family: Arial, sans-serif;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -215,69 +227,129 @@ function DJDashboard() {
                     min-height: 100vh;
                     margin: 0;
                     padding: 20px;
-                    background: #f5f5f5;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                   }
                 }
                 .qr-container {
                   text-align: center;
-                  padding: 40px;
+                  padding: 60px 50px;
                   background: white;
-                  border-radius: 8px;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  border-radius: 20px;
+                  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                  max-width: 600px;
+                  width: 100%;
+                }
+                .event-header {
+                  margin-bottom: 30px;
+                  padding-bottom: 25px;
+                  border-bottom: 3px solid #667eea;
                 }
                 h1 {
-                  margin-bottom: 20px;
+                  margin-bottom: 15px;
                   color: #333;
-                  font-size: 28px;
+                  font-size: 32px;
+                  font-weight: 700;
+                  letter-spacing: -0.5px;
                 }
-                p {
-                  margin: 10px 0;
+                .dj-name {
+                  font-size: 20px;
+                  font-weight: 600;
+                  color: #667eea;
+                  margin-bottom: 8px;
+                  text-transform: uppercase;
+                  letter-spacing: 1px;
+                }
+                .subtitle {
+                  margin-top: 15px;
                   color: #666;
-                  font-size: 16px;
+                  font-size: 18px;
+                  font-weight: 400;
+                }
+                .qr-wrapper {
+                  margin: 40px 0;
+                  padding: 30px;
+                  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                  border-radius: 16px;
+                  border: 2px dashed #667eea;
+                  display: inline-block;
                 }
                 .qr-image {
-                  margin: 20px auto;
                   display: block;
-                  border: 4px solid #000;
-                  padding: 10px;
-                  background: white;
-                  max-width: 400px;
+                  margin: 0 auto;
+                  max-width: 350px;
                   width: 100%;
                   height: auto;
+                  border-radius: 12px;
+                  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
                 }
-                .url {
-                  font-size: 14px;
-                  word-break: break-all;
-                  margin-top: 30px;
-                  padding: 10px;
-                  background: #f5f5f5;
-                  border-radius: 4px;
-                  max-width: 500px;
-                  margin-left: auto;
-                  margin-right: auto;
+                .instruction {
+                  margin-top: 35px;
+                  padding: 20px;
+                  background: #f0f4ff;
+                  border-radius: 12px;
+                  border-left: 4px solid #667eea;
+                }
+                .instruction-text {
+                  font-size: 16px;
+                  color: #555;
+                  line-height: 1.6;
+                  font-weight: 500;
+                }
+                .instruction-icon {
+                  font-size: 24px;
+                  margin-bottom: 10px;
                 }
                 .print-button {
-                  margin-top: 20px;
-                  padding: 12px 24px;
-                  background: #667eea;
+                  margin-top: 30px;
+                  padding: 16px 40px;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                   color: white;
                   border: none;
-                  border-radius: 8px;
-                  font-size: 16px;
+                  border-radius: 12px;
+                  font-size: 18px;
+                  font-weight: 600;
                   cursor: pointer;
+                  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                  transition: all 0.3s;
                 }
                 .print-button:hover {
-                  background: #5568d3;
+                  transform: translateY(-2px);
+                  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+                }
+                .print-button:active {
+                  transform: translateY(0);
+                }
+                .decorative-line {
+                  width: 80px;
+                  height: 4px;
+                  background: linear-gradient(90deg, #667eea, #764ba2);
+                  margin: 25px auto;
+                  border-radius: 2px;
                 }
               </style>
             </head>
             <body>
               <div class="qr-container">
-                <h1>${selectedEvent.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
-                <p style="font-size: 18px; font-weight: 600; color: #667eea; margin-bottom: 10px;">DJ ${djUsername.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
-                <p>Scanne den QR-Code für Liedwünsche</p>
-                <img src="${dataUrl}" alt="QR-Code" class="qr-image" />
-                <button class="print-button no-print" onclick="window.print()">Drucken</button>
+                <div class="event-header">
+                  <div class="dj-name">DJ ${djUsername.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                  <h1>${selectedEvent.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+                  <div class="decorative-line"></div>
+                  <p class="subtitle">Liedwünsche</p>
+                </div>
+                
+                <div class="qr-wrapper">
+                  <img src="${dataUrl}" alt="QR-Code" class="qr-image" />
+                </div>
+                
+                <div class="instruction">
+                  <div class="instruction-icon">📱</div>
+                  <div class="instruction-text">
+                    Scanne den QR-Code mit deinem Smartphone<br>
+                    um Lieder zu wünschen
+                  </div>
+                </div>
+                
+                <button class="print-button no-print" onclick="window.print()">🖨️ Drucken</button>
               </div>
               <script>
                 // Automatisch Druck-Dialog öffnen nach kurzer Verzögerung
