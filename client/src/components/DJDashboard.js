@@ -74,22 +74,7 @@ function DJDashboard() {
       setMasterQRCode(response.data);
     } catch (err) {
       console.error('Fehler beim Laden des Master-QR-Codes:', err);
-      // Fallback: QR-Code trotzdem generieren
-      try {
-        const token = localStorage.getItem('dj_token');
-        if (token) {
-          const jwt = require('jsonwebtoken');
-          const decoded = jwt.decode(token);
-          if (decoded && decoded.username) {
-            const QRCode = require('qrcode');
-            const masterUrl = `${window.location.protocol}//${window.location.host}/dj/${decoded.username}/active`;
-            const qrCodeDataUrl = await QRCode.toDataURL(masterUrl);
-            setMasterQRCode({ qrCode: qrCodeDataUrl, url: masterUrl, event: null });
-          }
-        }
-      } catch (fallbackErr) {
-        console.error('Fehler beim Fallback QR-Code:', fallbackErr);
-      }
+      setMasterQRCode(null);
     }
   };
 
