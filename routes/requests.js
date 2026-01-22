@@ -16,6 +16,8 @@ router.get('/:code', async (req, res) => {
     if (!event) {
       return res.status(404).json({ error: 'Veranstaltung nicht gefunden' });
     }
+    // is_active als Boolean zurückgeben für einfachere Prüfung im Frontend
+    event.is_active = event.is_active === 1 || event.is_active === true;
     res.json(event);
   } catch (error) {
     console.error('Fehler beim Abrufen der Veranstaltung:', error);
