@@ -87,6 +87,23 @@ const createTables = () => {
           FOREIGN KEY (request_id) REFERENCES requests(id),
           UNIQUE(request_id, ip_address)
         )
+      `);
+
+      // Archiv Tabelle für gelöschte Liedwünsche
+      db.run(`
+        CREATE TABLE IF NOT EXISTS archive (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          dj_id INTEGER NOT NULL,
+          event_name TEXT,
+          event_code TEXT,
+          title TEXT NOT NULL,
+          artist TEXT NOT NULL,
+          spotify_id TEXT,
+          final_votes INTEGER,
+          created_at DATETIME,
+          archived_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (dj_id) REFERENCES djs(id)
+        )
       `, (err) => {
         if (err) {
           reject(err);

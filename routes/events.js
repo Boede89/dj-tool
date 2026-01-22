@@ -61,6 +61,16 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Veranstaltung nicht gefunden' });
     }
 
+    // Alle Requests ins Archiv verschieben
+    const requests = await db.query('SELECT * FROM requests WHERE event_id = ?', [eventId]);
+    for (const request of requests) {
+      await db.run(
+        `INSERT INTO archive (dj_id, event_name, event_code, title, artist, spotify_id, final_votes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.djId, event.name, event.code, request.title, request.artist, request.spotify_id, request.votes, request.created_at]
+      );
+    }
+
     // Alle Requests und Votes löschen
     await db.run('DELETE FROM votes WHERE request_id IN (SELECT id FROM requests WHERE event_id = ?)', [eventId]);
     await db.run('DELETE FROM requests WHERE event_id = ?', [eventId]);
@@ -82,6 +92,16 @@ router.delete('/:eventId/requests/:requestId', async (req, res) => {
     const event = await db.get('SELECT * FROM events WHERE id = ? AND dj_id = ?', [eventId, req.djId]);
     if (!event) {
       return res.status(404).json({ error: 'Veranstaltung nicht gefunden' });
+    }
+
+    // Request ins Archiv verschieben
+    const request = await db.get('SELECT * FROM requests WHERE id = ? AND event_id = ?', [requestId, eventId]);
+    if (request) {
+      await db.run(
+        `INSERT INTO archive (dj_id, event_name, event_code, title, artist, spotify_id, final_votes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [req.djId, event.name, event.code, request.title, request.artist, request.spotify_id, request.votes, request.created_at]
+      );
     }
 
     // Request löschen (Votes werden durch CASCADE gelöscht)

@@ -14,11 +14,14 @@ function DJDashboard() {
   const [requests, setRequests] = useState([]);
   const [showQRCode, setShowQRCode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const [archive, setArchive] = useState([]);
   const [spotifyClientId, setSpotifyClientId] = useState('');
   const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
   const [hasSpotifyCredentials, setHasSpotifyCredentials] = useState(false);
   const navigate = useNavigate();
   const refreshIntervalRef = useRef(null);
+  const qrCodeRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem('dj_token');
@@ -154,6 +157,108 @@ function DJDashboard() {
     return `${window.location.origin}/event/${eventCode}`;
   };
 
+  const printQRCode = () => {
+    if (!selectedEvent) return;
+    
+    const printWindow = window.open('', '_blank');
+    const qrUrl = getQRCodeUrl(selectedEvent.code);
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>QR-Code - ${selectedEvent.name}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+            }
+            .qr-container {
+              text-align: center;
+            }
+            h1 {
+              margin-bottom: 10px;
+              color: #333;
+            }
+            p {
+              margin: 5px 0;
+              color: #666;
+            }
+            .url {
+              font-size: 14px;
+              word-break: break-all;
+              margin-top: 20px;
+            }
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="qr-container">
+            <h1>${selectedEvent.name}</h1>
+            <p>Scanne den QR-Code für Liedwünsche</p>
+            <div id="qrcode"></div>
+            <p class="url">${qrUrl}</p>
+          </div>
+          <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+          <script>
+            QRCode.toCanvas(document.getElementById('qrcode'), '${qrUrl}', {
+              width: 400,
+              margin: 2
+            }, function (error) {
+              if (error) console.error(error);
+              setTimeout(() => {
+                window.print();
+                window.onafterprint = () => window.close();
+              }, 500);
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const loadArchive = async () => {
+    try {
+      const response = await api.get('/api/dj/archive');
+      setArchive(response.data);
+    } catch (err) {
+      setError('Fehler beim Laden des Archivs');
+    }
+  };
+
+  const deleteArchive = async () => {
+    if (!window.confirm('Möchten Sie wirklich das gesamte Archiv löschen?')) return;
+    
+    try {
+      await api.delete('/api/dj/archive');
+      setArchive([]);
+      setSuccess('Archiv gelöscht');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Löschen des Archivs');
+    }
+  };
+
+  const deleteArchiveEntry = async (entryId) => {
+    try {
+      await api.delete(`/api/dj/archive/${entryId}`);
+      setArchive(archive.filter(a => a.id !== entryId));
+      setSuccess('Eintrag gelöscht');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Fehler beim Löschen des Eintrags');
+    }
+  };
+
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     if (!newEventName.trim()) return;
@@ -179,13 +284,22 @@ function DJDashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h1 style={{ color: 'white' }}>DJ Dashboard</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
-          {!showCreateForm && !showSettings && (
+          {!showCreateForm && !showSettings && !showArchive && (
             <>
               <button
                 className="btn btn-primary"
                 onClick={() => setShowCreateForm(true)}
               >
                 + Neue Veranstaltung
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowArchive(true);
+                  loadArchive();
+                }}
+              >
+                📚 Archiv
               </button>
               <button
                 className="btn btn-secondary"
@@ -316,7 +430,88 @@ function DJDashboard() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selectedEvent ? '300px 1fr' : '1fr', gap: '20px' }}>
+      {showArchive && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Archiv</h2>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                className="btn btn-danger"
+                onClick={deleteArchive}
+                disabled={archive.length === 0}
+              >
+                Gesamtes Archiv löschen
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowArchive(false);
+                }}
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+
+          <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
+            Hier findest du alle Liedwünsche, die bereits gespielt wurden oder deren Veranstaltung gelöscht wurde.
+          </p>
+
+          {archive.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <p style={{ fontSize: '18px' }}>Das Archiv ist leer</p>
+            </div>
+          ) : (
+            <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+              {archive.map((entry) => (
+                <div
+                  key={entry.id}
+                  style={{
+                    padding: '16px',
+                    marginBottom: '12px',
+                    background: '#f8f9fa',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                      {entry.title}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                      {entry.artist}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#999' }}>
+                      {entry.event_name && (
+                        <span>Veranstaltung: <strong>{entry.event_name}</strong> ({entry.event_code})</span>
+                      )}
+                      {entry.event_name && ' • '}
+                      <span>Finale Votes: <strong>{entry.final_votes}</strong></span>
+                      {' • '}
+                      <span>Gewünscht: {new Date(entry.created_at).toLocaleString('de-DE')}</span>
+                      {' • '}
+                      <span>Archiviert: {new Date(entry.archived_at).toLocaleString('de-DE')}</span>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => deleteArchiveEntry(entry.id)}
+                    style={{ marginLeft: '16px' }}
+                  >
+                    Löschen
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!showCreateForm && !showSettings && !showArchive && (
+        <div style={{ display: 'grid', gridTemplateColumns: selectedEvent ? '300px 1fr' : '1fr', gap: '20px' }}>
         {/* Event-Liste */}
         <div className="card" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           <h2 style={{ marginBottom: '16px' }}>Veranstaltungen</h2>
@@ -369,6 +564,14 @@ function DJDashboard() {
                 >
                   {showQRCode ? 'QR-Code verbergen' : 'QR-Code anzeigen'}
                 </button>
+                {showQRCode && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={printQRCode}
+                  >
+                    🖨️ QR-Code drucken
+                  </button>
+                )}
                 <button
                   className="btn btn-danger"
                   onClick={() => {

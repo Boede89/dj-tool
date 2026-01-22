@@ -21,6 +21,7 @@ app.use(express.static(path.join(__dirname, 'client/build')));
 app.use('/api/dj', authRoutes);
 app.use('/api/dj/events', eventRoutes);
 app.use('/api/dj/settings', require('./routes/settings'));
+app.use('/api/dj/archive', require('./routes/archive'));
 app.use('/api/events', requestRoutes);
 app.use('/api/spotify', spotifyRoutes);
 
