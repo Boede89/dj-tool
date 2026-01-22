@@ -10,6 +10,7 @@ const authenticate = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.djId = decoded.djId;
+    req.isSuperadmin = decoded.isSuperadmin || false;
     next();
   } catch (error) {
     res.status(401).json({ error: 'Ungültiger Token' });

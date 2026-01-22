@@ -23,7 +23,11 @@ function DJLogin() {
         setPassword('');
       } else {
         localStorage.setItem('dj_token', response.data.token);
-        navigate('/dj/dashboard');
+        if (response.data.isSuperadmin) {
+          navigate('/superadmin/dashboard');
+        } else {
+          navigate('/dj/dashboard');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Ein Fehler ist aufgetreten');
@@ -79,13 +83,6 @@ function DJLogin() {
           >
             {isRegistering ? 'Bereits registriert? Einloggen' : 'Noch kein Account? Registrieren'}
           </button>
-        </div>
-
-        <div style={{ marginTop: '20px', padding: '16px', background: '#f8f9fa', borderRadius: '8px', fontSize: '14px', color: '#666' }}>
-          <strong>Standard-Login:</strong><br />
-          Username: admin<br />
-          Passwort: admin<br />
-          <em>(Bitte nach dem ersten Login ändern!)</em>
         </div>
       </div>
     </div>

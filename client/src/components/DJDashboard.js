@@ -16,6 +16,7 @@ function DJDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [archive, setArchive] = useState([]);
+  const [selectedArchiveEvent, setSelectedArchiveEvent] = useState(null);
   const [spotifyClientId, setSpotifyClientId] = useState('');
   const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
   const [hasSpotifyCredentials, setHasSpotifyCredentials] = useState(false);
@@ -248,27 +249,20 @@ function DJDashboard() {
     }
   };
 
-  const deleteArchive = async () => {
-    if (!window.confirm('Möchten Sie wirklich das gesamte Archiv löschen?')) return;
+
+  const deleteArchiveEvent = async (eventCode) => {
+    if (!window.confirm('Möchten Sie diese Veranstaltung wirklich aus dem Archiv löschen?')) return;
     
     try {
-      await api.delete('/api/dj/archive');
-      setArchive([]);
-      setSuccess('Archiv gelöscht');
+      await api.delete(`/api/dj/archive/event/${eventCode}`);
+      setArchive(archive.filter(a => a.event_code !== eventCode));
+      if (selectedArchiveEvent === eventCode) {
+        setSelectedArchiveEvent(null);
+      }
+      setSuccess('Veranstaltung aus Archiv gelöscht');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Fehler beim Löschen des Archivs');
-    }
-  };
-
-  const deleteArchiveEntry = async (entryId) => {
-    try {
-      await api.delete(`/api/dj/archive/${entryId}`);
-      setArchive(archive.filter(a => a.id !== entryId));
-      setSuccess('Eintrag gelöscht');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError('Fehler beim Löschen des Eintrags');
+      setError('Fehler beim Löschen der Veranstaltung');
     }
   };
 
@@ -509,80 +503,113 @@ function DJDashboard() {
       )}
 
       {showArchive && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>Archiv</h2>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                className="btn btn-danger"
-                onClick={deleteArchive}
-                disabled={archive.length === 0}
-              >
-                Gesamtes Archiv löschen
-              </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px' }}>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2>Veranstaltungen</h2>
               <button
                 className="btn btn-secondary"
                 onClick={() => {
                   setShowArchive(false);
+                  setSelectedArchiveEvent(null);
                 }}
               >
                 Schließen
               </button>
             </div>
-          </div>
-
-          <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
-            Hier findest du alle Liedwünsche, die bereits gespielt wurden oder deren Veranstaltung gelöscht wurde.
-          </p>
-
-          {archive.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-              <p style={{ fontSize: '18px' }}>Das Archiv ist leer</p>
-            </div>
-          ) : (
-            <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-              {archive.map((entry) => (
-                <div
-                  key={entry.id}
-                  style={{
-                    padding: '16px',
-                    marginBottom: '12px',
-                    background: '#f8f9fa',
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
-                      {entry.title}
+            {archive.length === 0 ? (
+              <p style={{ color: '#666' }}>Keine archivierten Veranstaltungen</p>
+            ) : (
+              <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+                {archive.map((eventGroup) => (
+                  <div
+                    key={eventGroup.event_code}
+                    onClick={() => setSelectedArchiveEvent(eventGroup.event_code)}
+                    style={{
+                      padding: '16px',
+                      marginBottom: '8px',
+                      borderRadius: '8px',
+                      border: selectedArchiveEvent === eventGroup.event_code ? '2px solid #667eea' : '1px solid #e0e0e0',
+                      background: selectedArchiveEvent === eventGroup.event_code ? '#f0f4ff' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ fontWeight: '600', marginBottom: '4px' }}>
+                      {eventGroup.event_name || 'Unbekannte Veranstaltung'}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
-                      {entry.artist}
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                      Code: {eventGroup.event_code}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#999' }}>
-                      {entry.event_name && (
-                        <span>Veranstaltung: <strong>{entry.event_name}</strong> ({entry.event_code})</span>
-                      )}
-                      {entry.event_name && ' • '}
-                      <span>Finale Votes: <strong>{entry.final_votes}</strong></span>
-                      {' • '}
-                      <span>Gewünscht: {new Date(entry.created_at).toLocaleString('de-DE')}</span>
-                      {' • '}
-                      <span>Archiviert: {new Date(entry.archived_at).toLocaleString('de-DE')}</span>
+                    <div style={{ fontSize: '14px', color: '#667eea', fontWeight: '600' }}>
+                      {eventGroup.entries.length} Liedwünsche
                     </div>
                   </div>
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => deleteArchiveEntry(entry.id)}
-                    style={{ marginLeft: '16px' }}
-                  >
-                    Löschen
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {selectedArchiveEvent && (
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2>
+                  {archive.find(e => e.event_code === selectedArchiveEvent)?.event_name || 'Unbekannte Veranstaltung'}
+                </h2>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => deleteArchiveEvent(selectedArchiveEvent)}
+                >
+                  Veranstaltung löschen
+                </button>
+              </div>
+
+              <div style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+                {archive.find(e => e.event_code === selectedArchiveEvent)?.entries.length === 0 ? (
+                  <p style={{ color: '#666' }}>Keine Liedwünsche in dieser Veranstaltung</p>
+                ) : (
+                  archive.find(e => e.event_code === selectedArchiveEvent)?.entries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      style={{
+                        padding: '16px',
+                        marginBottom: '12px',
+                        background: '#f8f9fa',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '4px' }}>
+                          {entry.title}
+                        </div>
+                        <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                          {entry.artist}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#999' }}>
+                          <span>Finale Votes: <strong>{entry.final_votes}</strong></span>
+                          {' • '}
+                          <span>Gewünscht: {new Date(entry.created_at).toLocaleString('de-DE')}</span>
+                          {' • '}
+                          <span>Archiviert: {new Date(entry.archived_at).toLocaleString('de-DE')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {!selectedArchiveEvent && archive.length > 0 && (
+            <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+              <div style={{ textAlign: 'center', color: '#666' }}>
+                <p style={{ fontSize: '20px', marginBottom: '8px' }}>Wähle eine Veranstaltung aus</p>
+                <p style={{ fontSize: '14px' }}>Klicke auf eine Veranstaltung in der Liste, um die Liedwünsche anzuzeigen</p>
+              </div>
             </div>
           )}
         </div>

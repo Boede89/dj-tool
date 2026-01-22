@@ -30,6 +30,8 @@ const createTables = () => {
           password TEXT NOT NULL,
           spotify_client_id TEXT,
           spotify_client_secret TEXT,
+          music_source TEXT DEFAULT 'itunes',
+          is_superadmin INTEGER DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
@@ -50,6 +52,11 @@ const createTables = () => {
           db.run(`ALTER TABLE djs ADD COLUMN music_source TEXT DEFAULT 'itunes'`, (err) => {
             if (err && !err.message.includes('duplicate column')) {
               console.error('Fehler beim Hinzufügen der music_source Spalte:', err);
+            }
+          });
+          db.run(`ALTER TABLE djs ADD COLUMN is_superadmin INTEGER DEFAULT 0`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              console.error('Fehler beim Hinzufügen der is_superadmin Spalte:', err);
             }
           });
         }
@@ -134,15 +141,61 @@ const createDefaultDJ = () => {
           'INSERT INTO djs (username, password) VALUES (?, ?)',
           ['admin', hashedPassword],
           (err) => {
-            if (err) reject(err);
-            else {
-              console.log('Standard-DJ erstellt (Username: admin, Password: admin)');
-              resolve();
+            if (err) {
+              reject(err);
+              return;
             }
+            console.log('Standard-DJ erstellt (Username: admin, Password: admin)');
+            
+            // Superadmin erstellen
+            db.get('SELECT id FROM djs WHERE username = ?', ['Boede'], (err, superadminRow) => {
+              if (err) {
+                reject(err);
+                return;
+              }
+              if (!superadminRow) {
+                const superadminPassword = bcrypt.hashSync('6466', 10);
+                db.run(
+                  'INSERT INTO djs (username, password, is_superadmin) VALUES (?, ?, 1)',
+                  ['Boede', superadminPassword],
+                  (err) => {
+                    if (err) reject(err);
+                    else {
+                      console.log('Superadmin erstellt (Username: Boede, Password: 6466)');
+                      resolve();
+                    }
+                  }
+                );
+              } else {
+                resolve();
+              }
+            });
           }
         );
       } else {
-        resolve();
+        // Prüfen ob Superadmin existiert
+        db.get('SELECT id FROM djs WHERE username = ?', ['Boede'], (err, superadminRow) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          if (!superadminRow) {
+            const superadminPassword = bcrypt.hashSync('6466', 10);
+            db.run(
+              'INSERT INTO djs (username, password, is_superadmin) VALUES (?, ?, 1)',
+              ['Boede', superadminPassword],
+              (err) => {
+                if (err) reject(err);
+                else {
+                  console.log('Superadmin erstellt (Username: Boede, Password: 6466)');
+                  resolve();
+                }
+              }
+            );
+          } else {
+            resolve();
+          }
+        });
       }
     });
   });

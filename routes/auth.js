@@ -59,12 +59,16 @@ router.post('/login', async (req, res) => {
 
     // JWT Token erstellen
     const token = jwt.sign(
-      { djId: dj.id, username: dj.username },
+      { djId: dj.id, username: dj.username, isSuperadmin: dj.is_superadmin === 1 },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    res.json({ token, username: dj.username });
+    res.json({ 
+      token, 
+      username: dj.username,
+      isSuperadmin: dj.is_superadmin === 1
+    });
   } catch (error) {
     console.error('Login-Fehler:', error);
     res.status(500).json({ error: 'Fehler beim Login' });

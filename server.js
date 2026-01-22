@@ -22,6 +22,7 @@ app.use('/api/dj', authRoutes);
 app.use('/api/dj/events', eventRoutes);
 app.use('/api/dj/settings', require('./routes/settings'));
 app.use('/api/dj/archive', require('./routes/archive'));
+app.use('/api/superadmin', require('./routes/superadmin'));
 app.use('/api/events', requestRoutes);
 app.use('/api/spotify', spotifyRoutes);
 app.use('/api/music', require('./routes/music'));
