@@ -148,7 +148,7 @@ const createDefaultDJ = () => {
             console.log('Standard-DJ erstellt (Username: admin, Password: admin)');
             
             // Superadmin erstellen
-            db.get('SELECT id FROM djs WHERE username = ?', ['Boede'], (err, superadminRow) => {
+            db.get('SELECT id FROM djs WHERE username = ?', ['Daniel'], (err, superadminRow) => {
               if (err) {
                 reject(err);
                 return;
@@ -157,11 +157,11 @@ const createDefaultDJ = () => {
                 const superadminPassword = bcrypt.hashSync('6466', 10);
                 db.run(
                   'INSERT INTO djs (username, password, is_superadmin) VALUES (?, ?, 1)',
-                  ['Boede', superadminPassword],
+                  ['Daniel', superadminPassword],
                   (err) => {
                     if (err) reject(err);
                     else {
-                      console.log('Superadmin erstellt (Username: Boede, Password: 6466)');
+                      console.log('Superadmin erstellt (Username: Daniel, Password: 6466)');
                       resolve();
                     }
                   }
@@ -174,7 +174,7 @@ const createDefaultDJ = () => {
         );
       } else {
         // Prüfen ob Superadmin existiert
-        db.get('SELECT id FROM djs WHERE username = ?', ['Boede'], (err, superadminRow) => {
+        db.get('SELECT id FROM djs WHERE username = ?', ['Daniel'], (err, superadminRow) => {
           if (err) {
             reject(err);
             return;
@@ -183,11 +183,11 @@ const createDefaultDJ = () => {
             const superadminPassword = bcrypt.hashSync('6466', 10);
             db.run(
               'INSERT INTO djs (username, password, is_superadmin) VALUES (?, ?, 1)',
-              ['Boede', superadminPassword],
+              ['Daniel', superadminPassword],
               (err) => {
                 if (err) reject(err);
                 else {
-                  console.log('Superadmin erstellt (Username: Boede, Password: 6466)');
+                  console.log('Superadmin erstellt (Username: Daniel, Password: 6466)');
                   resolve();
                 }
               }
